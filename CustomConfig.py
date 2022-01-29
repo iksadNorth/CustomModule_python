@@ -7,8 +7,9 @@ class CustomConfig:
     보통 이 클래스를 상속해서 사용하는 것을 권장한다. 그대로 사용해도 무방하긴 하다.
     """
     
-    def __init__(self) -> None:
+    def __init__(self, **kargs) -> None:
         self.ignore = []
+        self.set(**kargs)
     
     def __call__(self, **kargs):
         """.set() 메서드의 설명을 참고하길 바란다.
@@ -32,7 +33,7 @@ class CustomConfig:
         
         str_direction = 'This is consisted of :'
         for var, val in self.directions():
-            str_direction += f'\n\t{var} = {val if (val is not None) else "Null"}'
+            str_direction += f'\n\t{var} = /{val if (val is not None) else "Null"}/'
         
         return str_direction
     
