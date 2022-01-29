@@ -1,6 +1,4 @@
 # %%
-from CustomPrint import CustomPrint
-
 class CustomConfig:
     """클래스의 설정값을 따로 관리하기 위해 만든 클래스.
     클래스의 설정값을 일괄적으로 대입시키기 위한 __call__함수를 정의하고
@@ -60,34 +58,34 @@ class CustomConfig:
 
 # %%
 if __name__ == "__main__":
-    p = CustomPrint()
     cfg = CustomConfig()
     
     cfg(a=1, b=2, c=3)
-    p.v(cfg)
+    print(cfg)
     
     cfg(a=2)
-    p.v(cfg)
+    print(cfg)
     
     cfg.ignore.append("b")
-    p.v(cfg)
+    print(cfg)
     
     cfg(_m=7)
-    p.v(cfg)
-    p.v(cfg._m)
+    print(cfg)
+    print(cfg._m)
     
     cfg(_m=8)
-    p.v(cfg)
-    p.v(cfg._m)
+    print(cfg)
+    print(cfg._m)
 
 # %%
 if __name__ == '__main__':
     cfg.ignore.clear()
-    p.v(cfg)
+    print(cfg)
     
     del cfg.c
-    p.v(cfg)
+    print(cfg)
 
+# %%
 
 
 
