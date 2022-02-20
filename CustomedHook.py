@@ -5,56 +5,12 @@ from pprint import pprint
 
 from typing import Callable
 from typing import Optional
+from typing import Union
 
 from random import random
 from functools import partial
 
 # %%
-class FishingKit(object):
-    """Hook들을 일괄 관리하는 곳. 차후에 일괄 print하거나 save하는 기능을 추가할 예정
-    """
-    def __init__(self, name:str):
-        """FishingKit의 name 필드와 box 필드를 초기화시킴.
-
-        Args:
-            name (str): 해당 FishingKit의 이름
-        """
-        self.name = name
-        self._box = {}
-    
-    @property
-    def box(self):
-        return self._box
-    
-    def append(self, hook:Hook):
-        """box 필드에 Hook 객체를 추가시킴. 
-        이때, box는 dict 형태인데 
-        key 값은 Hook 객체의 name 필드를 사용하고
-        value는 Hook 객체이다.
-
-        Args:
-            hook (Hook): 해당 kit에 관리보관하고 싶은 Hook 객체
-        """
-        self.box[hook.name] = hook
-        
-    def hook(self, name:str=None, fn:Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]]=None) -> Hook:
-        """해당 Kit에 종속된 Hook 객체를 생성. 생성된 Hook 객체는 별도로 Kit에 .append()하지 않아도 된다.
-
-        Args:
-            name (str, optional): 생성될 Hook의 이름. Defaults to None.
-            fn (Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]], optional): 생성될 Hook의 hook_fn. Defaults to None.
-
-        Returns:
-            Hook: 해당 Kit에 종속된 Hook 객체.
-            
-            사용 예시) 
-            fk.hook('forward').insert(linear)
-            fk.hook('backward').attach(linear)
-            fk.hook('tensor').tag(a)
-        """
-        return Hook(self, name, fn)
-
-
 class Hook(object):
     """pytorch의 hook을 좀더 쉽게 사용하고자 제작한 클래스.
     hook들을 한 곳에 모아 .remove()하기 쉽게 설계했으며(class FishingKit 참고),
@@ -67,7 +23,7 @@ class Hook(object):
     - .attach(module)
     - .tag(tensor)
     """
-    def __init__(self, kit:FishingKit, name:str=None, fn:Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]]=None):
+    def __init__(self, kit, name:str=None, fn:Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]]=None):
         """객체 생성 시, 해당 Kit에 등록하고 name 필드와 fn 필드를 초기화한다.
         이 때, name 값이 None이라면, 임의의 10자리 난수를 이름으로 지정한다.
         fn 필드는 hook_fn으로 사용하고 싶은 함수를 의미하는데 만약 해당 값이 주어지지 않는다면 기존에 정의된 hook_fn을 그대로 사용한다.
@@ -137,6 +93,64 @@ class Hook(object):
         hook_fn = partial(hook_fn, tensor, 'None because of type, tensor')
         self.hook = tensor.register_hook(hook_fn)
 
+class FishingKit(object):
+    """Hook들을 일괄 관리하는 곳. 차후에 일괄 print하거나 save하는 기능을 추가할 예정
+    """
+    def __init__(self, name:str):
+        """FishingKit의 name 필드와 box 필드를 초기화시킴.
+
+        Args:
+            name (str): 해당 FishingKit의 이름
+        """
+        self.name = name
+        self._box = {}
+    
+    @property
+    def box(self):
+        return self._box
+    
+    def __getitem__(self, key:Union[int, str]) -> Hook:
+        """Kit 내부에 있는 Hook을 List or Dict의 방식으로 인덱싱함.
+
+        Args:
+            key (Union[int, str]): 보통 Hook.name을 key값으로 쓰지만 특별히 숫자 인덱스도 사용가능하게 만듦.
+
+        Returns:
+            Hook: 인덱싱 결과로 나온 value값.
+        """
+        if key in self._box.keys():
+            return self._box[key]
+        else:
+            new_dict = {idx:hooks for idx, hooks in enumerate(self._box.values())}
+            return new_dict[key]
+    
+    def append(self, hook:Hook):
+        """box 필드에 Hook 객체를 추가시킴. 
+        이때, box는 dict 형태인데 
+        key 값은 Hook 객체의 name 필드를 사용하고
+        value는 Hook 객체이다.
+
+        Args:
+            hook (Hook): 해당 kit에 관리보관하고 싶은 Hook 객체
+        """
+        self.box[hook.name] = hook
+        
+    def hook(self, name:str=None, fn:Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]]=None) -> Hook:
+        """해당 Kit에 종속된 Hook 객체를 생성. 생성된 Hook 객체는 별도로 Kit에 .append()하지 않아도 된다.
+
+        Args:
+            name (str, optional): 생성될 Hook의 이름. Defaults to None.
+            fn (Callable[[nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]], optional): 생성될 Hook의 hook_fn. Defaults to None.
+
+        Returns:
+            Hook: 해당 Kit에 종속된 Hook 객체.
+            
+            사용 예시) 
+            fk.hook('forward').insert(linear)
+            fk.hook('backward').attach(linear)
+            fk.hook('tensor').tag(a)
+        """
+        return Hook(self, name, fn)
 
 # %%
 if __name__ == '__main__':
@@ -150,6 +164,11 @@ if __name__ == '__main__':
     kit.hook('backward').attach(linear)
     kit.hook('tensor').tag(arg)
     pprint(kit.box)
+    pprint('*'*50)
+    
+    pprint(kit['forward'].name)
+    pprint(kit[0].name)
+    pprint('*'*50)
     
     # m = linear(arg)
     # loss = torch.sum(m)
